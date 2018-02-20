@@ -4,12 +4,20 @@
 
 homeDir="$HOME"
 trashSafermDirName=".Trash_saferm"
-trashSafermPath="$home/$trashSafermDirName"
+Path="$HOME/$trashSafermDirName"
 target=$1
+itemsInDirectories=$(ls -l "$1" | sort -k1,1 | awk -F " " '{print $NF}' | sed -e '$ d' | xargs)
 
-if [ ! -d "$HOME/.Trash_saferm" ];
+userReplies(){
+
+[[ ${reply} == 'y*' || ${reply} == 'Y*' ]]
+
+}
+
+
+if [ ! -d "$Path" ];
 then
-        mkdir "$HOME/.Trash_saferm"
+        mkdir "$Path"
 fi
 
 #saferm for directory
@@ -21,16 +29,44 @@ then
         echo "$1 is a directory"
 fi
 
-read -p "remove $1? " -n 2 -r
-if [[ ${response:0:1} == 'y' || ${response:0:1} == 'Y' ]] && find "$target" -mindepth 1 -print -quit | grep -q .;
-then
-	echo "$target not empty"
-	read -p "examine files in $1? " -n 2 -r		
-	#mv $1 $HOME/.Trash_saferm
+if [[ -d "$1" ]] || [[ -f "$1" ]] && [[ $# -ne 0 ]]
+then 
+	#if its a file or directory and the number of argument isn't zero 
+	read -p "remove $1? "
+	if [[ userReplies ]] && find "$target" -mindepth 1 -print -quit | grep -q .;
+	then
+
+		echo "$target not empty"		
+		read -p "examine $1? "
+		if [[ userReplies ]];
+		then
+			for i in $itemsInDirectories; do
+
+        		read -p "remove $i? :"
+        		echo "$i removed"
+			done
+
+		else
+			false
+		fi	
+	else
+		false
+		
+	fi
+else
+	echo "usage: saferm [-f | -i] [-dPRrvW] file ..."
+        echo " unlink file"
+
 fi
 
+
+
+
+	 
+	#given the reply is yes
+
 #check if a directory is empty
-#if find "$target" -mindepth 1 -print -quit | grep -q .;
-#then
+	#checkingMindepth=$(find "$target" -mindepth 1 -print -quit | grep -q)
+
 	#echo "$target not empty"
 #fi
