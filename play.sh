@@ -66,5 +66,4 @@ currentDir=$(dirname $currentDir)
 }
 
 recursivelyExamineSubDirectory $1
-
-
+######
