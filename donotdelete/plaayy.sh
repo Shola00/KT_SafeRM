@@ -5,16 +5,16 @@
 homeDir="$HOME"
 trashSafermDirName=".Trash_saferm"
 safeRmPath="$HOME/$trashSafermDirName"
+numberOfItemsInDirectory=$(ls -l "$1" | sort -k1,1 | awk -F " " '{print $NF}' | sed -e '$ d' | wc -l | xargs)
 
 vFlag=0
 rFlag=0
 dFlag=0
-RFlag=0
 
 vArg1=""
 rArg1=""
 dArg1=""
-RArg1=""
+
 
 function usage(){
 
@@ -47,33 +47,27 @@ userReplyYes(){
 }
 
 handleFile(){
-  if [[ -f $1 ]]; then
+  if [[ -f $1 ]] && [[ $numberOfItemsInDirectory -eq 0 ]]; then
       read -p "remove $1 ? " response
       userReplyYes $response
       if [[ ($? -eq 0) ]] ; then
-          # mv $currentDir $safeRmPath #
-          if [[ $vFlag -eq 1 ]]; then
-            echo "$1 removed"
-          fi
+          # mv $currentDir $safeRmPath
+          echo "$1 removed"
       else
-        if [[ $vFlag -eq 1 ]]; then
           echo "$1 not removed"
-        fi
       fi
   fi
 }
 
 handleEmptyDir(){
-
-  echo "in handleEmptyDir $1 : $numberOfItemsInDirectory"
   if [[ -d $1 ]] && [[ $numberOfItemsInDirectory -eq 0 ]]; then
       read -p "remove $1 ? " response
       userReplyYes $response
       if [[ ($? -eq 0) ]] ; then
-          # mv $currentDir $safeRmPath "$1 removed"
-          echo ""
+          # mv $currentDir $safeRmPath
+          echo "$1 removed"
       else
-          echo ""
+          echo "$1 not removed"
       fi
   fi
 }
@@ -158,7 +152,7 @@ recursiveRm(){
     fi
 }
 
-while getopts ":vrdR" opt ; do
+while getopts ":v:r:d:" opt ; do
     case $opt in
         v)
             vFlag=1;
@@ -172,10 +166,6 @@ while getopts ":vrdR" opt ; do
             dFlag=1;
             dArg1=$OPTARG
             ;;
-        R)
-            RFlag=1;
-            RArg1=$OPTARG
-            ;;
         *)
         usage
         echo "Invalid argument"
@@ -185,52 +175,21 @@ done
 shift $((OPTIND-1))
 
 
-numberOfItemsInDirectory=$(ls -l "$1" | sort -k1,1 | awk -F " " '{print $NF}' | sed -e '$ d' | wc -l | xargs)
-
-
 if [ ! -d "$safeRmPath" ];
 then
   mkdir "$safeRmPath"
 fi
+#if [[ ($dFlag -eq 1) ]]; then
+#echo "safeRm: $dArg1 directory not empty"
+#fi
 
-if [[ $rFlag -eq 1 ]]; then
-  recursiveRm $1
+# if [[ ($rFlag -eq 1) ]] || [[ ($rFlag -eq 0) ]]; then
+recursiveRm $1
+# fi
+
+# if [[ ($vFlag -eq 1) ]] || [[ ($dFlag -eq 1) ]] || [[ ($vFlag -eq 0) ]] || [[ ($dFlag -eq 0) ]] ; then
   handleFile $1
   handleEmptyDir $1
-fi
 
-if [[ $vFlag -eq 1 ]] && [[ $rFlag -eq 0 ]]; then
-  if [[ -f $1 ]]; then
-    handleFile $1
-  else
-    echo "SafeRm:$1: is a Directory"
-    fi
-fi
+#fi
 
-if [[ $dFlag -eq 1 ]]; then
-  #shola
-  if [[ -f $1 ]]; then
-    handleFile $1
-  else
-    if [[ $rFlag -eq 1 ]]; then
-        recursiveRm $1
-    else
-        if [[ $numberOfItemsInDirectory -eq 0 ]]; then
-          handleEmptyDir $1
-        else
-          echo "safeRm:$1:Directory not empty"
-        fi
-    fi
-    #shol check if dir is empty
-  fi
-fi
-
-if [[ $dFlag -eq 0 ]] && [[ $rFlag -eq 0 ]] && [[ $vFlag -eq 0 ]]; then
-  recursiveRm $1
-  handleFile $1
-  handleEmptyDir $1
-fi
-
-if [[ $RFlag -eq 1 ]]; then
-  echo " $1 recovery getting set"
-fi
