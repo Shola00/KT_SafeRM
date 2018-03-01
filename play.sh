@@ -5,7 +5,7 @@
 homeDir="$HOME"
 trashSafermDirName=".Trash_saferm"
 safeRmPath="$HOME/$trashSafermDirName"
-
+workingDir=$(pwd)
 vFlag=0
 rFlag=0
 dFlag=0
@@ -16,9 +16,11 @@ rArg1=""
 dArg1=""
 RArg1=""
 
-function usage(){
+usage(){
 
-echo " usage : $0 [-v <option>][-r <option> ] [-d <option> ]"
+  echo "usage: saferm [-drv] file ..."
+  		echo "	unlink file"
+  		false
 
 }
 
@@ -27,10 +29,10 @@ finalSafeRm(){
   userReplyYes $response
   if [[ ($? -eq 0) ]] && [[ $numberOfItemsInDirectory -eq 0 ]]
   then
+    mv $currentDir $safeRmPath
     echo "$currentDir removed"
-    #mv $currentDir $safeRmPath
   else
-    echo "$currentDir not removed"
+    echo "$currentDir not empty"
   fi
 
 }
@@ -47,11 +49,11 @@ userReplyYes(){
 }
 
 handleFile(){
-  if [[ -f $1 ]]; then
-      read -p "remove $1 ? " response
+  if [[ -f $* ]]; then
+      read -p "remove $* ? " response
       userReplyYes $response
       if [[ ($? -eq 0) ]] ; then
-          # mv $currentDir $safeRmPath #
+          mv $1 $safeRmPath
           if [[ $vFlag -eq 1 ]]; then
             echo "$1 removed"
           fi
@@ -65,12 +67,11 @@ handleFile(){
 
 handleEmptyDir(){
 
-  echo "in handleEmptyDir $1 : $numberOfItemsInDirectory"
   if [[ -d $1 ]] && [[ $numberOfItemsInDirectory -eq 0 ]]; then
       read -p "remove $1 ? " response
       userReplyYes $response
       if [[ ($? -eq 0) ]] ; then
-          # mv $currentDir $safeRmPath "$1 removed"
+          mv $1 $safeRmPath
           echo ""
       else
           echo ""
@@ -78,8 +79,7 @@ handleEmptyDir(){
   fi
 }
 
-
-recursivelyExamineSubDirectory(){
+recursivelyExamineDir(){
 
     currentDir=$1
     itemsInDirectories=$(ls -l "$currentDir" | sort -k1,1 | awk -F " " '{print $NF}' | sed -e '$ d')
@@ -98,7 +98,7 @@ recursivelyExamineSubDirectory(){
                 userReplyYes $response
                 if [[ ($? -eq 0) ]]; then
                     echo "$currentDir/$item removed"
-                     #mv $currentDir/$item $safeRmPath
+                     mv $currentDir/$item $safeRmPath
                 else
                     echo "$currentDir/$item not removed"
                 fi
@@ -106,7 +106,7 @@ recursivelyExamineSubDirectory(){
 
             userReplyYes $response
         if [[ ($? -eq 0) ]] && [[ $numberOfContentsInDirectory -gt 0 ]]; then
-                recursivelyExamineSubDirectory $currentDir/$item
+                recursivelyExamineDir $currentDir/$item
 
                 fi
 
@@ -115,7 +115,7 @@ recursivelyExamineSubDirectory(){
                 userReplyYes $response
                     if [[ ($? -eq 0) ]]; then
                         echo "$currentDir/$item removed"
-                        # mv $currentDir/$item $safeRmPath
+                        mv $currentDir/$item $safeRmPath
                     else
                         echo "$currentDir/$item not removed"
                     fi
@@ -123,26 +123,25 @@ recursivelyExamineSubDirectory(){
 
         done
 
-    if [[ -d $currentDir ]] ; then
+    # if [[ -d $currentDir ]] ; then
         read -p "remove $currentDir? " response
         finalSafeRm $currentDir
-    else
-        handleFile $currentDir
-    fi
+    # else
+    #     handleFile $currentDir
+    # fi
 
 
     currentDir=$(dirname $currentDir)
 
 }
 
-
-recursiveRm(){
+handleDirNotEmpty(){
 
     if [[ -d "$1" ]] && [[ $numberOfItemsInDirectory -gt 0 ]]; then
             read -p "examine files in $1? " response
             userReplyYes $response
                 if [[ ($? -eq 0) ]] ; then
-                        recursivelyExamineSubDirectory $1
+                        recursivelyExamineDir $1
                 else
                     echo "$1 not examined"
                     read -p "remove $1? " response
@@ -157,6 +156,23 @@ recursiveRm(){
         false
     fi
 }
+
+recoverContent(){
+
+  item=$1
+  itemPath=$workingDir/$item
+  previousItemPath=$(dirname $itemPath)
+  itemInTrash=$safeRmPath/$item
+
+  read -p "recover $1? " response
+  userReplyYes $response
+  if [[ ($? -eq 0) ]] ; then
+    mv $itemInTrash $previousItemPath
+  else
+    echo "$1 not recovered"
+  fi
+}
+
 
 while getopts ":vrdR" opt ; do
     case $opt in
@@ -184,53 +200,58 @@ done
 
 shift $((OPTIND-1))
 
+if [[ $# -ne 0 ]]; then
 
-numberOfItemsInDirectory=$(ls -l "$1" | sort -k1,1 | awk -F " " '{print $NF}' | sed -e '$ d' | wc -l | xargs)
-
-
-if [ ! -d "$safeRmPath" ];
-then
-  mkdir "$safeRmPath"
-fi
-
-if [[ $rFlag -eq 1 ]]; then
-  recursiveRm $1
-  handleFile $1
-  handleEmptyDir $1
-fi
-
-if [[ $vFlag -eq 1 ]] && [[ $rFlag -eq 0 ]]; then
-  if [[ -f $1 ]]; then
-    handleFile $1
+  if [[ $RFlag -eq 1 ]]; then
+    recoverContent $1
   else
-    echo "SafeRm:$1: is a Directory"
-    fi
-fi
-
-if [[ $dFlag -eq 1 ]]; then
-  #shola
-  if [[ -f $1 ]]; then
-    handleFile $1
-  else
-    if [[ $rFlag -eq 1 ]]; then
-        recursiveRm $1
-    else
-        if [[ $numberOfItemsInDirectory -eq 0 ]]; then
-          handleEmptyDir $1
-        else
-          echo "safeRm:$1:Directory not empty"
-        fi
-    fi
-    #shol check if dir is empty
+    numberOfItemsInDirectory=$(ls -l "$1" | sort -k1,1 | awk -F " " '{print $NF}' | sed -e '$ d' | wc -l | xargs)
   fi
-fi
 
-if [[ $dFlag -eq 0 ]] && [[ $rFlag -eq 0 ]] && [[ $vFlag -eq 0 ]]; then
-  recursiveRm $1
-  handleFile $1
-  handleEmptyDir $1
-fi
+  if [ ! -d "$safeRmPath" ];
+  then
+    mkdir "$safeRmPath"
+  fi
 
-if [[ $RFlag -eq 1 ]]; then
-  echo " $1 recovery getting set"
+  if [[ $rFlag -eq 1 ]]; then
+    handleDirNotEmpty $1
+    handleFile $*
+    handleEmptyDir $1
+  fi
+
+  if [[ $vFlag -eq 1 ]] && [[ $rFlag -eq 0 ]]; then
+    if [[ -f $* ]]; then
+      handleFile $*
+    else
+      echo "SafeRm: $1: is a Directory"
+      fi
+  fi
+
+  if [[ $dFlag -eq 1 ]]; then
+    if [[ -f $* ]]; then
+      handleFile $*
+    else
+      if [[ $rFlag -eq 1 ]]; then
+          handleDirNotEmpty $1
+      else
+          if [[ $numberOfItemsInDirectory -eq 0 ]]; then
+            handleEmptyDir $1
+          else
+            echo "safeRm: $1: Directory not empty"
+          fi
+      fi
+    fi
+  fi
+
+  if [[ $dFlag -eq 0 ]] && [[ $rFlag -eq 0 ]] && [[ $vFlag -eq 0 ]] && [[ $RFlag -eq 0 ]]; then
+    if [[ -f $* ]]; then
+      handleFile $*
+    fi
+    if [[ -d $1 ]]; then
+      echo "saferm: $1: is a directory"
+    fi
+  fi
+
+else
+    usage
 fi
