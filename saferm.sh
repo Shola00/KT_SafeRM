@@ -13,18 +13,13 @@ rFlag=0
 dFlag=0
 RFlag=0
 
-vArg1=""
-rArg1=""
-dArg1=""
-RArg1=""
-
 #--------------------------------------------------------------------------------------------------------------------------------------------------
 #declaration of functions
 
 usage(){
 
   echo "usage: saferm [-drv] file ..."
-  		echo "	unlink file"
+  echo "	unlink file"
   		false
 
 }
@@ -60,7 +55,7 @@ handleFile(){
       userReplyYes $response
       if [[ ($? -eq 0) ]] ; then
           mv $1 $safeRmPath
-          if [[ $vFlag -eq 1 ]]; then
+          if [[ $vFlag -eq 1 ]]; then       #if vflag is passed
             echo "$1 "
           fi
       else
@@ -80,6 +75,9 @@ handleEmptyDir(){
           mv $1 $safeRmPath
       else
           false
+      fi
+      if [[ $vFlag -eq 1 ]] && [[ $dFlag -eq 1 ]]; then     #if vflag is combined with dflag
+        echo "safeRm: $1: Directory not empty "
       fi
   fi
 }
@@ -173,19 +171,15 @@ while getopts ":vrdR" opt ; do
     case $opt in
         v)
             vFlag=1;
-            vArg1=$OPTARG
             ;;
         r)
             rFlag=1;
-            rArg1=$OPTARG
             ;;
         d)
             dFlag=1;
-            dArg1=$OPTARG
             ;;
         R)
             RFlag=1;
-            RArg1=$OPTARG
             ;;
         *)
         usage
@@ -205,6 +199,7 @@ fi
 if [[ $# -ne 0 ]]; then
 #check if the number of arguments passed to the script is not equal to 0, i.e an argument is passed, then the script should perform the list of actions bellow.
 
+#for uppercase R option or flag
 
   if [[ $RFlag -eq 1 ]]; then                             #if an argument is passed with the upper case "R", the script should read the "recoverContent" function.
     recoverContent $1
@@ -212,15 +207,19 @@ if [[ $# -ne 0 ]]; then
     numberOfItemsInDirectory=$(ls -l "$1" | sort -k1,1 | awk -F " " '{print $NF}' | sed -e '$ d' | wc -l | xargs)
   fi
 
+#for lowercase r option or flag
   if [[ $rFlag -eq 1 ]]; then                              #if an argument is passed with the "rflag" then perform the 3 functions enclosed.
     handleDirNotEmpty $1
     handleFile $1
     handleEmptyDir $1
   fi
 
+#codes below are for vflag alone, vfalg combined with dflag, vflag combined with rflag
   if [[ $vFlag -eq 1 ]] && [[ $rFlag -eq 0 ]] && [[ $dFlag -eq 0 ]]; then
 
                                                             #if vflag is set alone, pass action below.
+
+
     if [[ -f $1 ]]; then                                    #if its a file, then pass "handlefile" function
       handleFile $1
     else
