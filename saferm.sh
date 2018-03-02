@@ -227,10 +227,13 @@ if [[ $# -ne 0 ]]; then
     fi
   fi
 
+#vflag with dflag
   if [[ $dFlag -eq 1 ]]; then
     if [[ -f $1 ]]; then                                    #if "dflag" is passed and its a file, then pass "handleFile" function
       handleFile $1
     else
+      
+      #vflag with rflag
       if [[ $rFlag -eq 1 ]]; then                           #if "dflag" is combined with the "rflag", and passed to a dir not empty, then delete the dir.
           handleDirNotEmpty $1
       else
